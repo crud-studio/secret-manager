@@ -2,8 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/spf13/cobra"
 	"os"
 	"secret-manager/property"
@@ -12,11 +10,15 @@ import (
 var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List all properties",
-	Aliases: []string { "ls" },
+
+	Aliases: []string{"ls"},
 	Run: func(cmd *cobra.Command, args []string) {
-		client := property.NewClient(&aws.Config{
-			Region: aws.String(endpoints.EuWest1RegionID),
-		})
+		region, err := cmd.Flags().GetString("region")
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		client := property.NewClient(region)
 		propertyList, err := client.ListProperties()
 		if err != nil {
 			fmt.Println(err)

@@ -3,6 +3,7 @@ package property
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
@@ -11,9 +12,10 @@ import (
 )
 
 var tagToSearch = secretsmanager.Tag{
-	Key:   aws.String("io.doxin.secrets/type"),
+	Key:   aws.String("studio.crud.secrets/type"),
 	Value: aws.String("applicationProperties"),
 }
+
 type SecretValue struct {
 	ApplicationProperties string `json:"application.properties"`
 }
@@ -22,9 +24,12 @@ type Client struct {
 	Config *aws.Config
 }
 
-func NewClient(config *aws.Config) Client {
+func NewClient(region string) Client {
+
 	return Client{
-		config,
+		&aws.Config{
+			Region: aws.String(region),
+		},
 	}
 }
 
@@ -52,33 +57,34 @@ func (c Client) GetProperties(name string) (string, error) {
 	return secretValue.ApplicationProperties, nil
 }
 
-//func (c Client) CreateProperties(name, value string) error {
-//	if !c.isSecretValid(name) {
-//		return errors.New("secret is not valid")
-//	}
-//		svc := c.getService()
-//
-//		secretString, err := json.Marshal(&SecretValue{
-//		ApplicationProperties: value,
-//	})
-//		if err != nil {
-//		return err
-//	}
-//
-//	var tags = &[]secretsmanager.Tag{}
-//
-//	tags = append(*tags, tagToSearch)
-//
-//	input := secretsmanager.CreateSecretInput{
-//		Name: aws.String(name),
-//		SecretString: aws.String(string(secretString)),
-//		Tags: tags,
-//	}
-//
-//	err := svc.CreateSecret(&input)
-//
-//		return nil
-//	}
+func (c Client) CreateProperties(name, value string) error {
+	svc := c.getService()
+
+	secretString, err := json.Marshal(&SecretValue{
+		ApplicationProperties: value,
+	})
+	if err != nil {
+		return err
+	}
+
+	tags := make([]*secretsmanager.Tag, 1)
+	tags[0] = &tagToSearch
+
+	input := secretsmanager.CreateSecretInput{
+		Name:         aws.String(name),
+		SecretString: aws.String(string(secretString)),
+		Tags:         tags,
+	}
+
+	_, err = svc.CreateSecret(&input)
+
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("secret '%s' created successfully", name)
+	return nil
+}
 
 func (c Client) ListProperties() ([]string, error) {
 	svc := c.getService()
@@ -118,7 +124,10 @@ func (c Client) SaveProperties(name, value string) error {
 		SecretString: aws.String(string(secretString)),
 	}
 
-	svc.PutSecretValue(&input)
+	_, err = svc.PutSecretValue(&input)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

@@ -2,15 +2,36 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"secret-manager/property"
+	"secret-manager/util"
 
 	"github.com/spf13/cobra"
 )
 
 // createCmd represents the create command
 var createCmd = &cobra.Command{
-	Use:   "create",
+	Use: "create",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("create called")
+		secretName := args[0]
+		region, err := cmd.Flags().GetString("region")
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		client := property.NewClient(region)
+		result, err := util.OpenStringInEditor("")
+
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		err = client.CreateProperties(secretName, result)
+
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
 	},
 }
 
